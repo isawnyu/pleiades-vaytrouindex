@@ -1,0 +1,35 @@
+<configure
+    xmlns="http://namespaces.zope.org/zope"
+    xmlns:browser="http://namespaces.zope.org/browser"
+    xmlns:five="http://namespaces.zope.org/five"
+    i18n_domain="pleiades.vaytrouindex">
+
+<!-- GenericSetup integration -->
+<include file="profiles.zcml" />
+<adapter factory=".exportimport.VaytrouIndexNodeAdapter"/>
+
+<adapter
+    for=".interfaces.IVaytrouIndex"
+    factory=".index.VaytrouConnectionManager"
+    provides=".interfaces.IVaytrouConnectionManager"
+    />
+
+<five:registerClass
+    class=".index.VaytrouIndex"
+    meta_type="VaytrouIndex"
+    addview="addVaytrouIndex.html"
+    permission="cmf.ManagePortal"
+    global="False"
+    />
+
+<browser:page
+    for="zope.app.container.interfaces.IAdding"
+    name="addVaytrouIndex.html"
+    template="addVaytrouIndex.pt"
+    class=".browser.VaytrouIndexAddView"
+    permission="cmf.ManagePortal"
+    />
+
+<five:registerPackage package="." initialize=".initialize" />
+
+</configure>

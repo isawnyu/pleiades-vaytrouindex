@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<object name="portal_catalog" meta_type="Plone Catalog Tool">
+ <index name="geolocation" meta_type="VaytrouIndex">
+  <property name="vaytrou_uri_static"></property>
+  <property name="vaytrou_uri_env_var">VAYTROU_URI</property>
+ </index>
+</object>

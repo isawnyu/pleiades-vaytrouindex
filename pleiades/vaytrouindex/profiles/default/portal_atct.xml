@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<atcttool>
+ <topic_indexes>
+  <index name="geolocation"
+     description="Geolocation"
+     enabled="True" 
+     friendlyName="Geographic location">
+   <criteria>GeolocationCriterion</criteria>
+  </index>
+ </topic_indexes>
+</atcttool>
+
