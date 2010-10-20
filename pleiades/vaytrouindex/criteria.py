@@ -84,13 +84,13 @@ GeolocationCriterionSchema = ATBaseCriterionSchema + Schema((
                 required=0,
                 mode="rw",
                 write_permission=ChangeTopics,
-                default=None,
+                default='0',
                 widget=DecimalWidget(
+                    size=30,
                     label=_(u'label_geolocation_criteria_tolerance', default=u'Tolerance'),
                     description=_(u'help_geolocation_criteria_tolerance',
-                                  default=u'Tolerance in meters for distance predicate.')
+                                  default=u'Tolerance in kilometers for distance predicate.')
                     ),
-                validators=('isDecimal',),
                 )
     ))
 
@@ -120,7 +120,7 @@ class GeolocationCriterion(ATBaseCriterion):
         if predicate == 'intersection':
             result.append((self.Field(), {'query': val, 'range': predicate}))
         elif predicate == 'distance':
-            result.append((self.Field(), {'query': (val, self.getTolerance()), 'range': predicate}))
+            result.append((self.Field(), {'query': (val, self.getTolerance()*1000.0), 'range': predicate}))
         return tuple(result)
 
 registerCriterion(GeolocationCriterion, ('VaytrouIndex',))
