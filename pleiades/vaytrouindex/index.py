@@ -174,10 +174,14 @@ class VaytrouIndex(PropertyManager, SimpleItem):
 
         log.debug("querying: %r", vaytrou_params)
 
-        response = cm.connection.query(
-            vaytrou_params['range'], vaytrou_params['query'])
-        intids = [int(item['id']) for item in response]
-        return IISet(intids), ('geolocation',)
+        try:
+            response = cm.connection.query(
+                vaytrou_params['range'], vaytrou_params['query'])
+            intids = [int(item['id']) for item in response]
+            return IISet(intids), ('geolocation',)
+        except Exception, e:
+            log.warn("Failed to apply %s: %s", vaytrou_params, str(e))
+            return None
 
     ## The ZCatalog Index management screen uses these methods ##
 
