@@ -8,6 +8,7 @@ from Products.Archetypes.atapi import TextAreaWidget
 from Products.Archetypes.atapi import StringField, StringWidget
 from Products.Archetypes.atapi import SelectionWidget
 from Products.Archetypes.atapi import FloatField, DecimalWidget
+from Products.Archetypes.atapi import IntegerField, IntegerWidget
 from Products.Archetypes.atapi import DisplayList
 
 from Products.ATContentTypes.criteria import registerCriterion
@@ -31,6 +32,7 @@ validation.register(isPoint)
 GeoPredicates = DisplayList((
                     ('intersection', _(u'Intersection')),
                     ('distance', _(u'Distance')),
+                    ('nearest', _(u'Nearest')),
 #                  , ('min', _(u'Greater than'))
 #                  , ('max', _(u'Less than'))
 #                  , ('min:max', _(u'Between'))
@@ -84,12 +86,24 @@ GeolocationCriterionSchema = ATBaseCriterionSchema + Schema((
                 required=0,
                 mode="rw",
                 write_permission=ChangeTopics,
-                default='0',
+                default=0.0,
                 widget=DecimalWidget(
                     size=30,
-                    label=_(u'label_geolocation_criteria_tolerance', default=u'Tolerance'),
+                    label=_(u'label_geolocation_criteria_tolerance', default=u'Distance Tolerance'),
                     description=_(u'help_geolocation_criteria_tolerance',
-                                  default=u'Tolerance in kilometers for distance predicate.')
+                                  default=u'Tolerance in kilometers for distance predicate')
+                    ),
+                ),
+    IntegerField('limit',
+                required=0,
+                mode="rw",
+                write_permission=ChangeTopics,
+                default=1,
+                widget=DecimalWidget(
+                    size=4,
+                    label=_(u'label_geolocation_criteria_limit', default=u'Nearest Limit'),
+                    description=_(u'help_geolocation_criteria_limit',
+                                  default=u'Maximum number of unique distances for nearest')
                     ),
                 )
     ))
@@ -118,9 +132,17 @@ class GeolocationCriterion(ATBaseCriterion):
         val = self.Value()
         predicate = self.getPredicate()
         if predicate == 'intersection':
-            result.append((self.Field(), {'query': val, 'range': predicate}))
+            result.append(
+                (self.Field(), {'query': val, 'range': predicate}))
         elif predicate == 'distance':
-            result.append((self.Field(), {'query': (val, self.getTolerance()*1000.0), 'range': predicate}))
+            result.append(
+                (self.Field(), 
+                 {'query': (val, self.getTolerance()*1000.0), 
+                  'range': predicate}))
+        elif predicate == 'nearest':
+            result.append(
+                (self.Field(), 
+                 {'query': (val, self.getLimit()), 'range': predicate}))
         return tuple(result)
 
 registerCriterion(GeolocationCriterion, ('VaytrouIndex',))

@@ -8,7 +8,7 @@ from httplib2 import Http
 from simplejson import dumps, loads
 
 import Globals  # import Zope 2 dependencies in order
-from BTrees.IIBTree import IISet
+from BTrees.IIBTree import IIBTree, IISet
 from OFS.PropertyManager import PropertyManager
 from OFS.SimpleItem import SimpleItem
 from transaction.interfaces import IDataManager
@@ -177,8 +177,12 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         try:
             response = cm.connection.query(
                 vaytrou_params['range'], vaytrou_params['query'])
-            intids = [int(item['id']) for item in response]
-            return IISet(intids), ('geolocation',)
+            result = IIBTree()
+            for item in response:                
+                # TODO: provide scores from vaytrou server
+                score = int(float(item.get('score', 0)) * 1000)
+                result[int(item['id'])] = score
+            return result, ('geolocation',)
         except Exception, e:
             log.warn("Failed to apply %s: %s", vaytrou_params, str(e))
             return None
@@ -247,6 +251,9 @@ class VaytrouConnection(object):
             data = dict(bbox=bbox, start=0)
         elif range == 'distance':
             data = dict(lon=geom[0][0], lat=geom[0][1], radius=geom[1], start=0)
+        elif range == 'nearest':
+            bbox = ','.join(map(str, geom[0]))
+            data = dict(bbox=bbox, limit=geom[1], start=0)
         h = Http(timeout=1000)
         results = []
         N = 1
