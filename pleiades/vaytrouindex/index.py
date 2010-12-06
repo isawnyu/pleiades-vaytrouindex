@@ -15,10 +15,10 @@ from transaction.interfaces import IDataManager
 import transaction
 from zope.interface import implements
 
-from Products.PleiadesEntity.geo import NotLocatedError
+from zgeo.geographer.interfaces import IGeoreferenced
+from pleiades.geographer.geo import NotLocatedError
 from pleiades.vaytrouindex.interfaces import IVaytrouConnectionManager
 from pleiades.vaytrouindex.interfaces import IVaytrouIndex
-from zgeo.geographer.interfaces import IGeoreferenced
 
 log = logging.getLogger(__name__)
 
