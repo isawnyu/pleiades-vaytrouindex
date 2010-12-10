@@ -93,11 +93,10 @@ class VaytrouIndex(PropertyManager, SimpleItem):
     def getEntryForObject(self, documentId, default=None):
         """Return the information stored for documentId"""
         cm = self.connection_manager
-        response = cm.connection.items(documentId)
-        results = list(response)
-        if results:
-            return results[0]
-        else:
+        try:
+            response = cm.connection.items(documentId)
+            return list(response)[0]
+        except VaytrouHTTPError:
             return None
 
     def index_object(self, documentId, obj, threshold=None):
