@@ -238,7 +238,11 @@ class VaytrouConnection(object):
         
     def items(self, docId):
         h = Http(timeout=1000)
-        resp, content = h.request(self.uri + '/items/%s' % str(docId), "GET")
+        try:
+            resp, content = h.request(
+                self.uri + '/items/%s' % str(docId), "GET")
+        except Exception, e:
+            raise VaytrouHTTPError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return loads(content)
