@@ -96,7 +96,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         try:
             response = cm.connection.items(documentId)
             return list(response)[0]
-        except VaytrouHTTPError:
+        except (VaytrouConnectionError, VaytrouHTTPError):
             return None
 
     def index_object(self, documentId, obj, threshold=None):
@@ -129,10 +129,13 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         o = wrap(obj)
         if o is None:
             return 0
-        o['id'] = str(documentId)
-        doc = dict(index=[o])
-        log.debug("indexing %d", documentId)
-        cm.connection.batch(doc)
+        try:
+            o['id'] = str(documentId)
+            doc = dict(index=[o])
+            log.debug("indexing %d", documentId)
+            cm.connection.batch(doc)
+        except Exception, e:
+            log.warn("Failed to index_doc %s: %s", documentId, str(e))
         return 1
 
     def unindex_object(self, documentId):
@@ -195,8 +198,11 @@ class VaytrouIndex(PropertyManager, SimpleItem):
     def indexSize(self):
         """Return the number of indexed objects"""
         cm = self.connection_manager
-        response = cm.connection.info()
-        return int(response['num_items'])
+        try:
+            response = cm.connection.info()
+            return int(response['num_items'])
+        except VaytrouHTTPError:
+            return 0
 
     def clear(self):
         """Empty the index"""
@@ -217,6 +223,12 @@ class NoRollbackSavepoint:
 class Error(Exception):
     pass
 
+class VaytrouConnectionError(Error):
+    def __init__(self, resp):
+        self.resp = resp
+    def __str__(self):
+        return str(self.resp)
+
 class VaytrouHTTPError(Error):
     def __init__(self, resp):
         self.resp = resp
@@ -231,7 +243,10 @@ class VaytrouConnection(object):
 
     def info(self):
         h = Http(timeout=1000)
-        resp, content = h.request(self.uri, "GET")
+        try:
+            resp, content = h.request(self.uri, "GET")
+        except Exception, e:
+            raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return loads(content)
@@ -242,7 +257,7 @@ class VaytrouConnection(object):
             resp, content = h.request(
                 self.uri + '/items/%s' % str(docId), "GET")
         except Exception, e:
-            raise VaytrouHTTPError(e)
+            raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return loads(content)
@@ -276,7 +291,10 @@ class VaytrouConnection(object):
 
     def batch(self, doc):
         h = Http(timeout=1000)
-        resp, content = h.request(self.uri, "POST", body=dumps(doc))
+        try:
+            resp, content = h.request(self.uri, "POST", body=dumps(doc))
+        except Exception, e:
+            raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return 1
