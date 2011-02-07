@@ -95,7 +95,9 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         cm = self.connection_manager
         try:
             response = cm.connection.items(documentId)
-            return list(response)[0]
+            return [dict(
+                geometry=item.get('geometry'), bbox=item.get('bbox')
+                ) for item in response['items']]
         except (VaytrouConnectionError, VaytrouHTTPError):
             return None
 
@@ -124,7 +126,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
                         ),
                     geometry=dict(type=g.type, coordinates=g.coordinates)
                     )
-            except (AttributeError, NotLocatedError, TypeError):
+            except (AttributeError, NotLocatedError, TypeError, ValueError):
                 return None
         o = wrap(obj)
         if o is None:
@@ -134,6 +136,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             doc = dict(index=[o])
             log.debug("indexing %d", documentId)
             cm.connection.batch(doc)
+            log.debug("Passed index_doc %s", documentId)
         except Exception, e:
             log.warn("Failed to index_doc %s: %s", documentId, str(e))
         return 1
@@ -146,6 +149,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             doc = dict(unindex=[item])
             log.debug("unindexing %d", documentId)
             cm.connection.batch(doc)
+            log.debug("Passed unindex_doc %s", documentId)
         except Exception, e:
             log.warn("Failed to unindex_doc %s: %s", documentId, str(e))
         return 1
@@ -207,9 +211,11 @@ class VaytrouIndex(PropertyManager, SimpleItem):
     def clear(self):
         """Empty the index"""
         cm = self.connection_manager
-        cm.set_changed()
-        cm.connection.delete_query()
-
+        try:
+            response = cm.connection.clear()
+            return response
+        except VaytrouHTTPError:
+            return 0
 
 class NoRollbackSavepoint:
 
@@ -293,6 +299,18 @@ class VaytrouConnection(object):
         h = Http(timeout=1000)
         try:
             resp, content = h.request(self.uri, "POST", body=dumps(doc))
+        except Exception, e:
+            raise VaytrouConnectionError(e)
+        if resp.status != 200:
+            raise VaytrouHTTPError(resp)
+        return 1
+
+    def clear(self):
+        h = Http(timeout=1000)
+        doc = {'clear': True}
+        try:
+            resp, content = h.request(self.uri, "POST", body=dumps(doc))
+            log.debug("Index cleared.")
         except Exception, e:
             raise VaytrouConnectionError(e)
         if resp.status != 200:
