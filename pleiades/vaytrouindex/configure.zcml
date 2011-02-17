@@ -30,6 +30,22 @@
     permission="cmf.ManagePortal"
     />
 
+<five:registerClass
+    class=".index.LocationContainerIndex"
+    meta_type="LocationContainerIndex"
+    addview="addLocationContainerIndex.html"
+    permission="cmf.ManagePortal"
+    global="False"
+    />
+
+<browser:page
+    for="zope.app.container.interfaces.IAdding"
+    name="addLocationContainerIndex.html"
+    template="addLocationContainerIndex.pt"
+    class=".browser.LocationContainerIndexAddView"
+    permission="cmf.ManagePortal"
+    />
+
 <five:registerPackage package="." initialize=".initialize" />
 
 </configure>

@@ -1,5 +1,5 @@
 
-from pleiades.vaytrouindex.index import VaytrouIndex
+from pleiades.vaytrouindex.index import VaytrouIndex, LocationContainerIndex
 
 
 class VaytrouIndexAddView:
@@ -28,3 +28,26 @@ class VaytrouIndexAddView:
         # Note the unfortunate homonym "index": self.index() renders the add
         # form, which submits to this method to add a catalog index.
         return self.index()
+
+
+class LocationContainerIndexAddView:
+
+    def __call__(self, id='', submit_add='',
+            delete_redundant=False):
+
+        if submit_add and id:
+            obj = LocationContainerIndex(id)
+            zcatalog = self.context.context
+            catalog = zcatalog._catalog
+            catalog.addIndex(id, obj)
+
+            zcatalog._p_jar.add(obj)
+
+            self.request.response.redirect(
+                zcatalog.absolute_url() +
+                "/manage_catalogIndexes?manage_tabs_message=Index%20Added")
+
+        # Note the unfortunate homonym "index": self.index() renders the add
+        # form, which submits to this method to add a catalog index.
+        return self.index()
+
