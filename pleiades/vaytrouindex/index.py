@@ -99,12 +99,13 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         except (VaytrouConnectionError, VaytrouHTTPError):
             return None
 
-    def index_object(self, documentId, obj):
+    def index_object(self, documentId, obj, threshold=None):
         """Index an object.
 
         'documentId' is the integer ID of the document.
         'obj' is the object to be indexed.
         """
+        log.debug("Indexing %d", documentId)
         cm = self.connection_manager
         portal_path = obj.portal_url.getPortalObject().getPhysicalPath()
         def wrap(ob):
@@ -118,19 +119,19 @@ class VaytrouIndex(PropertyManager, SimpleItem):
                         path='/'.join(ob_path),
                         pid=ob.getId(),
                         title=ob.Title(),
-                        description=ob.Description() or ob.getDescription(),
+                        description=ob.Description(),
                         ),
                     geometry=dict(type=g.type, coordinates=g.coordinates)
                     )
-            except (AttributeError, NotLocatedError, TypeError, ValueError):
-                return None
+            except (AttributeError, NotLocatedError, TypeError, ValueError), e:
+                log.warn("Failed to wrap ob %s: %s", ob, str(e))
+                return 0
         o = wrap(obj)
         if o is None:
             return 0
         try:
             o['id'] = str(documentId)
             doc = dict(index=[o])
-            log.debug("indexing %d", documentId)
             cm.connection.batch(doc)
             log.debug("Passed index_doc %s", documentId)
         except Exception, e:
@@ -139,15 +140,16 @@ class VaytrouIndex(PropertyManager, SimpleItem):
 
     def unindex_object(self, documentId):
         """Remove the documentId from the index."""
+        log.debug("Unindexing %d", documentId)
         cm = self.connection_manager
         try:
-            item = cm.connection.items(documentId)[0]
+            item = cm.connection.items(documentId)['items'][0]
             doc = dict(unindex=[item])
-            log.debug("unindexing %d", documentId)
             cm.connection.batch(doc)
             log.debug("Passed unindex_doc %s", documentId)
         except Exception, e:
             log.warn("Failed to unindex_doc %s: %s", documentId, str(e))
+            return 0
         return 1
 
     def _apply_index(self, request, cid='', raw=False):
@@ -239,10 +241,10 @@ class LocationContainerIndex(PropertyManager, SimpleItem):
         return None
 
     def index_object(self, documentId, obj, threshold=None):
-        pass
+        return 1
 
     def unindex_object(self, documentId):
-        pass
+        return 1
 
     def _apply_index(self, request, cid=''):
         record = parseIndexRequest(request, self.getId(), self.query_options)
