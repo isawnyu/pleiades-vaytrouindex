@@ -25,6 +25,13 @@ from pleiades.vaytrouindex.interfaces import IVaytrouIndex
 log = logging.getLogger('pleiades.vaytrou')
 
 
+from plone.indexer.decorator import indexer
+from Products.PleiadesEntity.content.interfaces import ILocation
+@indexer(ILocation)
+def location_geolocation(object, **kw):
+     return IGeoreferenced(object)
+
+
 class VaytrouIndex(PropertyManager, SimpleItem):
     # Inspired by and derived from alm.solrindex's SolrIndex
 
@@ -105,7 +112,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         'documentId' is the integer ID of the document.
         'obj' is the object to be indexed.
         """
-        log.debug("Indexing %d", documentId)
+        log.info("Indexing %s: %s, %s", self.getId(), documentId, obj)
         cm = self.connection_manager
         portal_path = obj.portal_url.getPortalObject().getPhysicalPath()
         def wrap(ob):
@@ -125,6 +132,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
                     )
             except (AttributeError, NotLocatedError, TypeError, ValueError), e:
                 log.warn("Failed to wrap ob %s: %s", ob, str(e))
+                raise
                 return 0
         o = wrap(obj)
         if o is None:

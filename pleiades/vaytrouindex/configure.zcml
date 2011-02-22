@@ -14,6 +14,9 @@
     provides=".interfaces.IVaytrouConnectionManager"
     />
 
+<adapter name="geolocation" factory=".index.location_geolocation"/>
+
+
 <five:registerClass
     class=".index.VaytrouIndex"
     meta_type="VaytrouIndex"

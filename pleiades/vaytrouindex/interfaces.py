@@ -6,6 +6,14 @@ from zope.interface import Interface
 from Products.PluginIndexes.interfaces import IPluggableIndex
 
 
+class IFeature(Interface):
+    """A GeoJSON-ish object"""
+    bounds = Attribute("Spatial bounds of feature")
+    fid = Attribute("Unique feature identifier")
+    geometry = Attribute("Primary geometric object")
+    properties = Attribute("Mapping of object properties")
+
+
 class IVaytrouIndex(IPluggableIndex):
     """A ZCatalog multi-index that uses Vaytrou for storage and queries."""
     vaytrou_uri = Attribute("The URI of the Vaytrou server")
