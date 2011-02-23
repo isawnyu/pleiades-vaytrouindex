@@ -29,7 +29,7 @@ Add Vaytrou Index
     </td>
     <td align="left" valign="top">
     <input type="text" name="vaytrou_uri" size="60"
-        value="http://localhost:8888/" />
+        value="http://localhost:8889" />
     </td>
   </tr>
 

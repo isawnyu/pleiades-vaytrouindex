@@ -15,21 +15,14 @@ from Products.PluginIndexes.interfaces import IPluggableIndex
 from simplejson import dumps, loads
 from transaction.interfaces import IDataManager
 import transaction
-from pleiades.geographer.geo import NotLocatedError
-from zgeo.geographer.interfaces import IGeoreferenced
 from zope.interface import implements
 
+from pleiades.geographer.geo import NotLocatedError
 from pleiades.vaytrouindex.interfaces import IVaytrouConnectionManager
 from pleiades.vaytrouindex.interfaces import IVaytrouIndex
+from zgeo.geographer.interfaces import IGeoreferenced
 
 log = logging.getLogger('pleiades.vaytrou')
-
-
-from plone.indexer.decorator import indexer
-from Products.PleiadesEntity.content.interfaces import ILocation
-@indexer(ILocation)
-def location_geolocation(object, **kw):
-     return IGeoreferenced(object)
 
 
 class VaytrouIndex(PropertyManager, SimpleItem):
@@ -40,7 +33,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
     _properties = (
         {'id': 'vaytrou_uri_static', 'type': 'string', 'mode': 'w',
             'description':
-            'The Vaytrou URI, for example, "http://localhost:8888/". '
+            'The Vaytrou URI, for example, "http://localhost:8889". '
             'You should leave this empty if you set vaytrou_uri_env_var.'},
         {'id': 'vaytrou_uri_env_var', 'type': 'string', 'mode': 'w',
             'description':
@@ -107,36 +100,24 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             return None
 
     def index_object(self, documentId, obj, threshold=None):
-        """Index an object.
-
-        'documentId' is the integer ID of the document.
-        'obj' is the object to be indexed.
+        """Index the object using a Vaytrou client connection
+        
+        ``documentId`` is the integer ID of the document.
+        ``obj`` is the object to be indexed.
+        
+        The object shall provide an attribute with the same name as this index,
+        otherwise this method makes no connection and returns 0. That attribute
+        is expected to yield a GeoJSON-like Feature mapping.
         """
         log.info("Indexing %s: %s, %s", self.getId(), documentId, obj)
-        cm = self.connection_manager
-        portal_path = obj.portal_url.getPortalObject().getPhysicalPath()
-        def wrap(ob):
-            try:
-                ob_path = ob.getPhysicalPath()[len(portal_path):]
-                g = IGeoreferenced(ob)
-                return dict(
-                    id=ob.getPhysicalPath(),
-                    bbox=g.bounds,
-                    properties=dict(
-                        path='/'.join(ob_path),
-                        pid=ob.getId(),
-                        title=ob.Title(),
-                        description=ob.Description(),
-                        ),
-                    geometry=dict(type=g.type, coordinates=g.coordinates)
-                    )
-            except (AttributeError, NotLocatedError, TypeError, ValueError), e:
-                log.warn("Failed to wrap ob %s: %s", ob, str(e))
-                raise
-                return 0
-        o = wrap(obj)
+        
+        # The obj is an indexable object wrapper, and we're looking for
+        # an attribute with the same name as the index
+        o = getattr(obj, self.getId(), None)
         if o is None:
+            log.info("No indexable attribute %s in %s", self.getId(), obj)
             return 0
+        cm = self.connection_manager
         try:
             o['id'] = str(documentId)
             doc = dict(index=[o])
@@ -144,6 +125,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             log.debug("Passed index_doc %s", documentId)
         except Exception, e:
             log.warn("Failed to index_doc %s: %s", documentId, str(e))
+            return 0
         return 1
 
     def unindex_object(self, documentId):
@@ -217,11 +199,12 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             return 0
 
 
-class LocationContainerIndex(PropertyManager, SimpleItem):
-    """Finds containers of spatially indexed objects
+class LocationQueryIndex(PropertyManager, SimpleItem):
+    """Finds spatially indexed objects and their containers
     
     A facade, does not index or unindex docs, only looks up objects
-    in a specified VaytrouIndex and returns index keys of their containers.
+    in a specified VaytrouIndex and returns their index keys and keys of their
+    containers.
     """
 
     implements(IPluggableIndex)
@@ -271,26 +254,28 @@ class LocationContainerIndex(PropertyManager, SimpleItem):
         for item in geo_response:
             paths[int(item['id'])] = item['properties']['path']
 
-        #ptIndex = catalog._catalog.getIndex('portal_type')
-        #pt_set = ptIndex._apply_index({'portal_type': ['Location']})[0]
-
         rolesIndex = catalog._catalog.getIndex('allowedRolesAndUsers')
         user = _getAuthenticatedUser(self)
         perms_set = rolesIndex._apply_index(
             {'allowedRolesAndUsers': catalog._listAllowedRolesAndUsers(user)}
             )[0]
 
-        #r = intersection(pt_set, perms_set)
         r = intersection(perms_set, IISet(paths.keys()))
 
         if isinstance(r, int):  r=IISet((r,))
         if r is None:
             return IISet(), (self.getId(),)
+
         else:
+            url_tool = getToolByName(self, 'portal_url')
+            portal_path = url_tool.getPortalObject().getPhysicalPath()
+            root = list(portal_path)
             def up(path):
-                return '/plone' + '/'.join(path.rstrip('/').split('/')[:-1])
-            return IISet(
-                [catalog.getrid(up(paths[lid])) for lid in r]), (self.getId(),)
+                return '/'.join(root + path.strip('/').split('/')[:-1])
+            return union(
+                r, 
+                IISet([catalog.getrid(up(paths[lid])) for lid in r])
+                ), (self.getId(),)
 
     def numObjects(self):
         return 0

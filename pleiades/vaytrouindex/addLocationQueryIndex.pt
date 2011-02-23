@@ -4,7 +4,7 @@
     tal:replace="structure context/manage_form_title">Form Title</h2>
 
 <p class="form-help">
-Add Place Vaytrou Index
+Add Location Query Index
 </p>
 
 <form action="." method="post"
@@ -17,7 +17,7 @@ Add Place Vaytrou Index
     </div>
     </td>
     <td align="left" valign="top">
-    <input type="text" name="id" size="40" value="placeGeolocation" />
+    <input type="text" name="id" size="40" value="where" />
     </td>
   </tr>
 

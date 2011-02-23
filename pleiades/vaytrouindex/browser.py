@@ -1,5 +1,5 @@
 
-from pleiades.vaytrouindex.index import VaytrouIndex, LocationContainerIndex
+from pleiades.vaytrouindex.index import VaytrouIndex, LocationQueryIndex
 
 
 class VaytrouIndexAddView:
@@ -30,13 +30,13 @@ class VaytrouIndexAddView:
         return self.index()
 
 
-class LocationContainerIndexAddView:
+class LocationQueryIndexAddView:
 
     def __call__(self, id='', submit_add='',
             delete_redundant=False):
 
         if submit_add and id:
-            obj = LocationContainerIndex(id)
+            obj = LocationQueryIndex(id)
             zcatalog = self.context.context
             catalog = zcatalog._catalog
             catalog.addIndex(id, obj)

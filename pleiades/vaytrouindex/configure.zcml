@@ -14,9 +14,6 @@
     provides=".interfaces.IVaytrouConnectionManager"
     />
 
-<adapter name="geolocation" factory=".index.location_geolocation"/>
-
-
 <five:registerClass
     class=".index.VaytrouIndex"
     meta_type="VaytrouIndex"
@@ -34,18 +31,18 @@
     />
 
 <five:registerClass
-    class=".index.LocationContainerIndex"
-    meta_type="LocationContainerIndex"
-    addview="addLocationContainerIndex.html"
+    class=".index.LocationQueryIndex"
+    meta_type="LocationQueryIndex"
+    addview="addLocationQueryIndex.html"
     permission="cmf.ManagePortal"
     global="False"
     />
 
 <browser:page
     for="zope.app.container.interfaces.IAdding"
-    name="addLocationContainerIndex.html"
-    template="addLocationContainerIndex.pt"
-    class=".browser.LocationContainerIndexAddView"
+    name="addLocationQueryIndex.html"
+    template="addLocationQueryIndex.pt"
+    class=".browser.LocationQueryIndexAddView"
     permission="cmf.ManagePortal"
     />
 
