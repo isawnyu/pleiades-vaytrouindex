@@ -146,5 +146,5 @@ class GeolocationCriterion(ATBaseCriterion):
         return tuple(result)
 
 registerCriterion(GeolocationCriterion, ('VaytrouIndex',))
-registerCriterion(GeolocationCriterion, ('LocationContainerIndex',))
+registerCriterion(GeolocationCriterion, ('LocationQueryIndex',))
 
