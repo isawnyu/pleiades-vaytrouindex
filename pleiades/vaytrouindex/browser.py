@@ -4,11 +4,12 @@ from pleiades.vaytrouindex.index import VaytrouIndex, LocationQueryIndex
 
 class VaytrouIndexAddView:
 
-    def __call__(self, id='', vaytrou_uri='', submit_add='',
-            delete_redundant=False):
+    def __call__(
+        self, id='', vaytrou_uri='', response_page_size='', submit_add='',
+        delete_redundant=False):
 
-        if submit_add and id and vaytrou_uri:
-            obj = VaytrouIndex(id, vaytrou_uri)
+        if submit_add and id and vaytrou_uri and response_page_size:
+            obj = VaytrouIndex(id, vaytrou_uri, int(response_page_size))
             zcatalog = self.context.context
             catalog = zcatalog._catalog
             catalog.addIndex(id, obj)

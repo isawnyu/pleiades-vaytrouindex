@@ -35,6 +35,18 @@ Add Vaytrou Index
 
   <tr>
     <td align="left" valign="top">
+    <div class="form-label">
+    Response Page Size
+    </div>
+    </td>
+    <td align="left" valign="top">
+    <input type="text" name="response_page_size" size="10"
+        value="20" />
+    </td>
+  </tr>
+
+  <tr>
+    <td align="left" valign="top">
     </td>
     <td align="left" valign="top">
     <div class="form-element">

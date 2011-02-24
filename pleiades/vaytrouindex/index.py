@@ -39,6 +39,8 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             'description':
             'The name of an environment variable that will provide '
             'the Vaytrou URI.  Ignored if vaytrou_uri_static is non-empty.'},
+        {'id': 'response_page_size', 'type': 'int', 'mode': 'w',
+         'description': 'Number of items in a response page'}
         )
 
     manage_options = PropertyManager.manage_options + SimpleItem.manage_options
@@ -46,11 +48,13 @@ class VaytrouIndex(PropertyManager, SimpleItem):
     _v_temp_cm = None
     vaytrou_uri_static = ''
     vaytrou_uri_env_var = ''
+    response_page_size = 0
     query_options = ['query', 'range']
 
-    def __init__(self, id, vaytrou_uri_static=''):
+    def __init__(self, id, vaytrou_uri_static='', response_page_size=0):
         self.id = id
         self.vaytrou_uri_static = vaytrou_uri_static
+        self.response_page_size = response_page_size
 
     @property
     def vaytrou_uri(self):
@@ -60,6 +64,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             return os.environ[self.vaytrou_uri_env_var]
         else:
             raise ValueError("No Vaytrou URI provided")
+
 
     @property
     def connection_manager(self):
@@ -77,7 +82,9 @@ class VaytrouIndex(PropertyManager, SimpleItem):
                 jar.foreign_connections = fc = {}
 
             manager = fc.get(oid)
-            if manager is None or manager.vaytrou_uri != self.vaytrou_uri:
+            if manager is None \
+            or manager.vaytrou_uri != self.vaytrou_uri \
+            or manager.response_page_size != self.response_page_size:
                 manager = IVaytrouConnectionManager(self)
                 fc[oid] = manager
 
@@ -311,8 +318,11 @@ class VaytrouHTTPError(Error):
         return str(self.resp)
 
 class VaytrouConnection(object):
-    def __init__(self, uri):
+
+    def __init__(self, uri, count=20):
         self.uri = uri
+        self.count = count
+
     def info(self):
         h = Http(timeout=1000)
         try:
@@ -335,15 +345,15 @@ class VaytrouConnection(object):
         return loads(content)
         
     def query(self, range, geom):
-        # Only supporting intersection at the moment
+        data = {'start': 0, 'count': self.count}
         if range == 'intersection':
             bbox = ','.join(map(str, geom))
-            data = dict(bbox=bbox, start=0)
+            data.update(bbox=bbox)
         elif range == 'distance':
-            data = dict(lon=geom[0][0], lat=geom[0][1], radius=geom[1], start=0)
+            data.update(lon=geom[0][0], lat=geom[0][1], radius=geom[1])
         elif range == 'nearest':
             bbox = ','.join(map(str, geom[0]))
-            data = dict(bbox=bbox, limit=geom[1], start=0)
+            data.update(bbox=bbox, limit=geom[1])
         h = Http(timeout=1000)
         results = []
         N = 1
@@ -390,14 +400,17 @@ class VaytrouConnectionManager(object):
 
     def __init__(self, vaytrou_index, connection_factory=VaytrouConnection):
         self.vaytrou_uri = vaytrou_index.vaytrou_uri
+        self.response_page_size = vaytrou_index.response_page_size
         self._joined = False
         self._connection_factory = connection_factory
-        self._connection = connection_factory(self.vaytrou_uri)
+        self._connection = connection_factory(
+            self.vaytrou_uri, self.response_page_size)
     @property
     def connection(self):
         c = self._connection
         if c is None:
-            c = self._connection_factory(self.vaytrou_uri)
+            c = self._connection_factory(
+                self.vaytrou_uri, self.response_page_size)
             self._connection = c
         return c
     def set_changed(self):
