@@ -346,7 +346,7 @@ class VaytrouConnection(object):
         
     def query(self, range, geom):
         data = {'start': 0, 'count': self.count}
-        if range == 'intersection':
+        if range in ('intersection', 'within'):
             bbox = ','.join(map(str, geom))
             data.update(bbox=bbox)
         elif range == 'distance':
