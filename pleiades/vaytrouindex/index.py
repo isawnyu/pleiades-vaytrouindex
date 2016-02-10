@@ -1,26 +1,21 @@
 """Pluggable Vaytrou-based spatial indexes"""
 
-import logging
-import os
-from urllib import urlencode
-
-import Globals  # import Zope 2 dependencies in order
-from BTrees.IIBTree import IIBTree, IITreeSet, IISet, union, intersection
+from BTrees.IIBTree import IIBTree, IISet, union, intersection
 from httplib2 import Http
 from OFS.PropertyManager import PropertyManager
 from OFS.SimpleItem import SimpleItem
+from pleiades.vaytrouindex.interfaces import IVaytrouConnectionManager
+from pleiades.vaytrouindex.interfaces import IVaytrouIndex
 from Products.CMFCore.utils import _getAuthenticatedUser, getToolByName
 from Products.PluginIndexes.common.util import parseIndexRequest
 from Products.PluginIndexes.interfaces import IPluggableIndex
 from simplejson import dumps, loads
 from transaction.interfaces import IDataManager
-import transaction
+from urllib import urlencode
 from zope.interface import implements
-
-from pleiades.geographer.geo import NotLocatedError
-from pleiades.vaytrouindex.interfaces import IVaytrouConnectionManager
-from pleiades.vaytrouindex.interfaces import IVaytrouIndex
-from zgeo.geographer.interfaces import IGeoreferenced
+import logging
+import os
+import transaction
 
 log = logging.getLogger('pleiades.vaytrou')
 
@@ -65,7 +60,6 @@ class VaytrouIndex(PropertyManager, SimpleItem):
         else:
             raise ValueError("No Vaytrou URI provided")
 
-
     @property
     def connection_manager(self):
         jar = self._p_jar
@@ -83,8 +77,8 @@ class VaytrouIndex(PropertyManager, SimpleItem):
 
             manager = fc.get(oid)
             if manager is None \
-            or manager.vaytrou_uri != self.vaytrou_uri \
-            or manager.response_page_size != self.response_page_size:
+                    or manager.vaytrou_uri != self.vaytrou_uri \
+                    or manager.response_page_size != self.response_page_size:
                 manager = IVaytrouConnectionManager(self)
                 fc[oid] = manager
 
@@ -108,16 +102,16 @@ class VaytrouIndex(PropertyManager, SimpleItem):
 
     def index_object(self, documentId, obj, threshold=None):
         """Index the object using a Vaytrou client connection
-        
+
         ``documentId`` is the integer ID of the document.
         ``obj`` is the object to be indexed.
-        
+
         The object shall provide an attribute with the same name as this index,
         otherwise this method makes no connection and returns 0. That attribute
         is expected to yield a GeoJSON-like Feature mapping.
         """
         log.info("Indexing %s: %s, %s", self.getId(), documentId, obj)
-        
+
         # The obj is an indexable object wrapper, and we're looking for
         # an attribute with the same name as the index
         o = getattr(obj, self.getId(), None)
@@ -130,7 +124,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             doc = dict(index=[o])
             cm.connection.batch(doc)
             log.debug("Passed index_doc %s", documentId)
-        except Exception, e:
+        except Exception as e:
             log.warn("Failed to index_doc %s: %s", documentId, str(e))
             return 0
         return 1
@@ -144,7 +138,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
             doc = dict(unindex=[item])
             cm.connection.batch(doc)
             log.debug("Passed unindex_doc %s", documentId)
-        except Exception, e:
+        except Exception as e:
             log.warn("Failed to unindex_doc %s: %s", documentId, str(e))
             return 0
         return 1
@@ -158,11 +152,11 @@ class VaytrouIndex(PropertyManager, SimpleItem):
 
         Returns None if request is not valid for this index.
 
-        If ``raw``, returns the raw response from the index server as a 
+        If ``raw``, returns the raw response from the index server as a
         mapping.
         """
         record = parseIndexRequest(request, self.getId(), self.query_options)
-        if record.keys == None:
+        if record.keys is None:
             return None
         params = {'query': record.keys, 'range': record.range}
 
@@ -179,7 +173,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
                 score = int(float(item.get('score', 0)) * 1000)
                 result[int(item['id'])] = score
             return result, (self.getId(),)
-        except Exception, e:
+        except Exception as e:
             log.warn("Failed to apply %s: %s", params, str(e))
             return None
 
@@ -208,7 +202,7 @@ class VaytrouIndex(PropertyManager, SimpleItem):
 
 class LocationQueryIndex(PropertyManager, SimpleItem):
     """Finds spatially indexed objects and their containers
-    
+
     A facade, does not index or unindex docs, only looks up objects
     in a specified VaytrouIndex and returns their index keys and keys of their
     containers.
@@ -218,12 +212,13 @@ class LocationQueryIndex(PropertyManager, SimpleItem):
     geoindex_id = ''
     query_options = ['query', 'range']
     _properties = (
-        {'id': 'geoindex_id', 
-         'type': 'string', 
-         'mode': 'w',
-         'description':
-           'The identifier of the Vaytrou Index, for example, "geolocation"'},
-        )
+        {
+            'id': 'geoindex_id',
+            'type': 'string',
+            'mode': 'w',
+            'description': 'The identifier of the Vaytrou Index, for example, "geolocation"',
+        },
+    )
 
     manage_options = PropertyManager.manage_options + SimpleItem.manage_options
 
@@ -246,9 +241,9 @@ class LocationQueryIndex(PropertyManager, SimpleItem):
 
     def _apply_index(self, request, cid=''):
         record = parseIndexRequest(request, self.getId(), self.query_options)
-        if record.keys == None:
+        if record.keys is None:
             return None
-        
+
         catalog = getToolByName(self, 'portal_catalog')
 
         geoIndex = catalog._catalog.getIndex(self.geoindex_id)
@@ -269,7 +264,8 @@ class LocationQueryIndex(PropertyManager, SimpleItem):
 
         r = intersection(perms_set, IISet(paths.keys()))
 
-        if isinstance(r, int):  r=IISet((r,))
+        if isinstance(r, int):
+            r = IISet((r,))
         if r is None:
             return IISet(), (self.getId(),)
 
@@ -280,7 +276,7 @@ class LocationQueryIndex(PropertyManager, SimpleItem):
             def up(path):
                 return '/'.join(root + path.strip('/').split('/')[:-1])
             return union(
-                r, 
+                r,
                 IISet([catalog.getrid(up(paths[lid])) for lid in r])
                 ), (self.getId(),)
 
@@ -297,25 +293,35 @@ class LocationQueryIndex(PropertyManager, SimpleItem):
 # Vaytrou index HTTP client
 
 class NoRollbackSavepoint:
+
     def __init__(self, datamanager):
         self.datamanager = datamanager
+
     def rollback(self):
         pass
+
 
 class Error(Exception):
     pass
 
+
 class VaytrouConnectionError(Error):
+
     def __init__(self, resp):
         self.resp = resp
+
     def __str__(self):
         return str(self.resp)
 
+
 class VaytrouHTTPError(Error):
+
     def __init__(self, resp):
         self.resp = resp
+
     def __str__(self):
         return str(self.resp)
+
 
 class VaytrouConnection(object):
 
@@ -327,23 +333,23 @@ class VaytrouConnection(object):
         h = Http(timeout=1000)
         try:
             resp, content = h.request(self.uri, "GET")
-        except Exception, e:
+        except Exception as e:
             raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return loads(content)
-        
+
     def items(self, docId):
         h = Http(timeout=1000)
         try:
             resp, content = h.request(
                 self.uri + '/items/%s' % str(docId), "GET")
-        except Exception, e:
+        except Exception as e:
             raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return loads(content)
-        
+
     def query(self, range, geom):
         data = {'start': 0, 'count': self.count}
         if range in ('intersection', 'within'):
@@ -360,8 +366,7 @@ class VaytrouConnection(object):
         try:
             while len(results) < N:
                 resp, content = h.request(
-                    self.uri + '/%s?%s' % (
-                                range, urlencode(data)),
+                    self.uri + '/%s?%s' % (range, urlencode(data)),
                     "GET")
                 r = loads(content)
                 N = r['hits']
@@ -370,30 +375,35 @@ class VaytrouConnection(object):
         except:
             raise
         return results
+
     def batch(self, doc):
         h = Http(timeout=1000)
         try:
             resp, content = h.request(self.uri, "POST", body=dumps(doc))
-        except Exception, e:
+        except Exception as e:
             raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return 1
+
     def clear(self):
         h = Http(timeout=1000)
         doc = {'clear': True}
         try:
             resp, content = h.request(self.uri, "POST", body=dumps(doc))
             log.debug("Index cleared.")
-        except Exception, e:
+        except Exception as e:
             raise VaytrouConnectionError(e)
         if resp.status != 200:
             raise VaytrouHTTPError(resp)
         return 1
+
     def commit(self):
         pass
+
     def delete_query(self):
         pass
+
 
 class VaytrouConnectionManager(object):
     implements(IVaytrouConnectionManager, IDataManager)
@@ -405,6 +415,7 @@ class VaytrouConnectionManager(object):
         self._connection_factory = connection_factory
         self._connection = connection_factory(
             self.vaytrou_uri, self.response_page_size)
+
     @property
     def connection(self):
         c = self._connection
@@ -413,10 +424,12 @@ class VaytrouConnectionManager(object):
                 self.vaytrou_uri, self.response_page_size)
             self._connection = c
         return c
+
     def set_changed(self):
         if not self._joined:
             transaction.get().join(self)
             self._joined = True
+
     def abort(self, transaction):
         try:
             c = self._connection
@@ -425,13 +438,17 @@ class VaytrouConnectionManager(object):
                 c.close()
         finally:
             self._joined = False
+
     def tpc_begin(self, transaction):
         pass
+
     def commit(self, transaction):
         pass
+
     def tpc_vote(self, transaction):
         # ensure connection is open
         dummy = self.connection
+
     def tpc_finish(self, transaction):
         try:
             try:
@@ -441,10 +458,12 @@ class VaytrouConnectionManager(object):
                 raise
         finally:
             self._joined = False
+
     def tpc_abort(self, transaction):
         pass
+
     def sortKey(self):
         return self.vaytrou_uri
+
     def savepoint(self, optimistic=False):
         return NoRollbackSavepoint(self)
-
