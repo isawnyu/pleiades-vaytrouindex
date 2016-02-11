@@ -1,27 +1,21 @@
-
-from Products.CMFCore.permissions import View
 from AccessControl import ClassSecurityInfo
-
-from Products.Archetypes.atapi import Schema
-from Products.Archetypes.atapi import TextField
-from Products.Archetypes.atapi import TextAreaWidget
-from Products.Archetypes.atapi import StringField, StringWidget
-from Products.Archetypes.atapi import SelectionWidget
-from Products.Archetypes.atapi import FloatField, DecimalWidget
-from Products.Archetypes.atapi import IntegerField, IntegerWidget
 from Products.Archetypes.atapi import DisplayList
-
+from Products.Archetypes.atapi import FloatField, DecimalWidget
+from Products.Archetypes.atapi import IntegerField
+from Products.Archetypes.atapi import Schema
+from Products.Archetypes.atapi import SelectionWidget
+from Products.Archetypes.atapi import StringField, StringWidget
+from Products.ATContentTypes import ATCTMessageFactory as _
 from Products.ATContentTypes.criteria import registerCriterion
-from Products.ATContentTypes.criteria import LIST_INDICES
-from Products.ATContentTypes.interfaces import IATTopicSearchCriterion
-from Products.ATContentTypes.permission import ChangeTopics
 from Products.ATContentTypes.criteria.base import ATBaseCriterion
 from Products.ATContentTypes.criteria.schemata import ATBaseCriterionSchema
-
-from Products.ATContentTypes import ATCTMessageFactory as _
-
+from Products.ATContentTypes.interfaces import IATTopicSearchCriterion
+from Products.ATContentTypes.permission import ChangeTopics
+from Products.CMFCore.permissions import View
 from Products.validation import validation
 from Products.validation.validators.RegexValidator import RegexValidator
+from zope.interface import implementer
+
 
 isPoint = RegexValidator('isPoint',
                    r'^([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?,([+-]?)(?=\d|\.\d)\d*(\.\d*)?([Ee]([+-]?\d+))?$',
@@ -108,10 +102,11 @@ GeolocationCriterionSchema = ATBaseCriterionSchema + Schema((
                 )
     ))
 
+
+@implementer(IATTopicSearchCriterion)
 class GeolocationCriterion(ATBaseCriterion):
     """A spatial search criterion"""
 
-    __implements__ = ATBaseCriterion.__implements__ + (IATTopicSearchCriterion, )
     security       = ClassSecurityInfo()
     schema         = GeolocationCriterionSchema
     meta_type      = 'GeolocationCriterion'
@@ -145,6 +140,4 @@ class GeolocationCriterion(ATBaseCriterion):
                  {'query': (val, self.getLimit()), 'range': predicate}))
         return tuple(result)
 
-registerCriterion(GeolocationCriterion, ('VaytrouIndex',))
-registerCriterion(GeolocationCriterion, ('LocationQueryIndex',))
-
+registerCriterion(GeolocationCriterion, ('VaytrouIndex', 'LocationQueryIndex'))
