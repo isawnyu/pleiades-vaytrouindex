@@ -4,7 +4,7 @@
  <property name="title" i18n:translate="">Geolocation Criterion</property>
  <property name="description"
      i18n:translate="">A spatial search criterion</property>
- <property name="content_icon">document_icon.gif</property>
+ <property name="content_icon">document_icon.png</property>
  <property name="content_meta_type">GeolocationCriterion</property>
  <property name="product">pleiades.vaytrouindex</property>
  <property name="factory">addGeolocationCriterion</property>
